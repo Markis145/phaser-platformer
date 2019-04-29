@@ -34,8 +34,9 @@ function die (player, enemy) {
 //  TODO -> Millorar en una animació
 //  TODO -> Afegir audio
 //  TODO -> Shake
-//  TODO -> Reiniciar nivell
-//  TODO -> Numero de vides i si les hem gastat aturat el joc
+  player.scene.cameras.main.shake(500)
+  //  TODO -> Reiniciar nivell
+  //  TODO -> Numero de vides i si les hem gastat aturat el joc
 
   player.disableBody(true, true)
 }
@@ -122,6 +123,17 @@ export default {
           this.physics.add.collider(this.enemies, this.level)
 
           this.physics.add.overlap(this.player, this.enemies, die, null, this)
+
+          //  prepare loser txt
+          this.loserText = this.add.text(500 / 2, 200 / 2 - 50, 'Looser!', { fontSize: '24px', fill: '#000' }).setVisible(false)
+
+          this.cameras.main.on('camerashakestart', () => {
+            this.loserText.setVisible(true)
+          })
+
+          this.cameras.main.on('camerashakecomplete', () => {
+            this.loserText.setVisible(false)
+          })
         },
         update () {
           this.player.anims.play('idle', true)

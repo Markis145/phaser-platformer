@@ -11,6 +11,8 @@ import ground from '../assets/ground.png'
 import player from '../assets/player.png'
 import coin from '../assets/coin.png'
 import enemy from '../assets/enemy.png'
+import soundDead from '../assets/dead.mp3'
+import soundCoin from '../assets/coin.mp3'
 
 let score = 0
 let scoreText
@@ -28,6 +30,7 @@ function takeCoin (player, coin) {
   // TODO -> executar so que pertoca (coin.mp3)
 
   // TODO -> actualitzar comptador de punts
+  this.sound.play('soundCoin')
 }
 
 function die (player, enemy) {
@@ -39,6 +42,7 @@ function die (player, enemy) {
   //  TODO -> Numero de vides i si les hem gastat aturat el joc
 
   player.disableBody(true, true)
+  this.sound.play('soundDead')
 }
 
 export default {
@@ -47,8 +51,8 @@ export default {
     // Phaser 3.0 -> phaser
     let config = {
       type: Phaser.AUTO,
-      width: 500,
-      height: 200,
+      width: 400,
+      height: 300,
       physics: {
         default: 'arcade',
         arcade: {
@@ -67,9 +71,12 @@ export default {
           this.load.spritesheet('player', player, { frameWidth: 28, frameHeight: 22 })
 
           // audio
-          // this.load.audio('dust', ['assets/dust.wav', 'assets/dust.mp3'])
+          this.load.audio('soundDead', soundDead)
+          this.load.audio('soundCoin', soundCoin)
         },
         create () {
+          this.sound.add('soundDead')
+          this.sound.add('soundCoin')
           console.log('created')
           //  Initialize del nivell -> Afegirem tiles (parets, terra, afegir jugadors, colectibles, enemics)
           this.cameras.main.backgroundColor.setTo(52, 152, 219)

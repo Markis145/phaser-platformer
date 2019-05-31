@@ -13,36 +13,70 @@ import coin from '../assets/coin.png'
 import enemy from '../assets/enemy.png'
 import soundDead from '../assets/dead.mp3'
 import soundCoin from '../assets/coin.mp3'
+import explosion from '../assets/explosion.png'
 
 let score = 0
 let scoreText
+let lives = 3
+let livesText
 
-//  Todo -> detectar quan l'usuari cau, ha de morir
 
 function takeCoin (player, coin) {
   //  TODO -> millorar en una animacio
-  coin.disableBody(true, true)
+
+  this.tweens.add({
+    targets: coin,
+    y: 50,
+    scaleX: 0,
+    ease: 'Linear',
+    duration: 160,
+    yoyo: false,
+    repeat: 0,
+    onComplete: () => { coin.disableBody(true, true) }
+  })
+
+  coin.disableBody(true)
 
   score = score + 10
-
-  // this.add.text(20, 20, 'score: ' + score, { fontSize: '12px', fill: '#000' })
   scoreText.setText('Score: ' + score)
-  // TODO -> executar so que pertoca (coin.mp3)
-
-  // TODO -> actualitzar comptador de punts
   this.sound.play('soundCoin')
 }
 
 function die (player, enemy) {
-//  TODO -> Millorar en una animació
-//  TODO -> Afegir audio
-//  TODO -> Shake
-  player.scene.cameras.main.shake(500)
-  //  TODO -> Reiniciar nivell
-  //  TODO -> Numero de vides i si les hem gastat aturat el joc
-
+  this.explosion = this.physics.add.sprite(
+    player.body.x + player.body.height / 2,
+    player.body.y + player.body.width / 2,
+    'explosion'
+  )
+  this.explosion.anims.play('explosion', false)
+  player.scene.cameras.main.shake(2000)
   player.disableBody(true, true)
-  this.sound.play('soundDead')
+  setTimeout(() => {
+    this.sound.play('soundDead')
+    this.scene.restart()
+    lives = lives - 1
+    if (lives == 0) {
+      this.scene.stop()
+    }
+  }, 200)
+}
+
+function onWorldBoundsCollide () {
+  this.explosion = this.physics.add.sprite(
+    this.player.body.x + this.player.body.height / 2,
+    this.player.body.y + this.player.body.width / 2,
+    'explosion'
+  )
+  this.explosion.anims.play('explosion', false)
+  this.player.disableBody(true, true)
+  setTimeout(() => {
+    this.sound.play('soundDead')
+    this.scene.restart()
+    lives = lives - 1
+    if (lives == 0) {
+      this.scene.stop()
+    }
+  }, 200)
 }
 
 export default {
@@ -51,23 +85,25 @@ export default {
     // Phaser 3.0 -> phaser
     let config = {
       type: Phaser.AUTO,
-      width: 400,
-      height: 300,
+      width: 500,
+      height: 200,
       physics: {
         default: 'arcade',
         arcade: {
           gravity: { y: 200 }
         }
       },
-      // No hi ha states a phaser 3.0 -> scenes (son com les pantalles d'un joc)
       scene: {
         preload () {
           console.log('preload')
-          // carregar assets pero encara no s'utilitzen-> imatges, jugadors, audios, videos
           this.load.image('wall', wall)
           this.load.image('ground', ground)
           this.load.image('coin', coin)
           this.load.image('enemy', enemy)
+          this.load.spritesheet('explosion', explosion, {
+            frameWidth: 262,
+            frameHeight: 262
+          })
           this.load.spritesheet('player', player, { frameWidth: 28, frameHeight: 22 })
 
           // audio
@@ -78,9 +114,7 @@ export default {
           this.sound.add('soundDead')
           this.sound.add('soundCoin')
           console.log('created')
-          //  Initialize del nivell -> Afegirem tiles (parets, terra, afegir jugadors, colectibles, enemics)
           this.cameras.main.backgroundColor.setTo(52, 152, 219)
-          // group per defecte es dinamic
           this.level = this.physics.add.staticGroup()
 
           // this.ground = this.physics.add.image(500 / 2, 200 / 2 + 30, 'ground')
@@ -95,7 +129,8 @@ export default {
           //  player -> fisiques
           this.player = this.physics.add.sprite(500 / 2, 200 / 2 - 50, 'player')
           this.player.setBounce(0.2)
-          // this.player.setCollideWorldBounds(true)
+          this.player.setCollideWorldBounds(true)
+          this.player.body.onWorldBounds = true
 
           this.physics.add.collider(this.player, this.level)
 
@@ -112,6 +147,16 @@ export default {
             repeat: -1
           })
 
+          this.anims.create({
+            key: 'explosion',
+            frames: this.anims.generateFrameNumbers('explosion', {
+              start: 0,
+              end: 6
+            }),
+            frameRate: 60,
+            repeat: -1
+          })
+
           this.coins = this.physics.add.group()
           this.coins.create(140, 200 / 2, 'coin')
           this.coins.create(170, 200 / 2, 'coin')
@@ -121,7 +166,8 @@ export default {
           this.physics.add.overlap(this.player, this.coins, takeCoin, null, this)
 
           // score
-          scoreText = this.add.text(20, 20, 'Score: 0', { fontSize: '12px', fill: '#000' })
+          scoreText = this.add.text(20, 20, 'Score: ' + score, { fontSize: '12px', fill: '#000' })
+          livesText = this.add.text(20, 40, 'Lives: ' + lives, { fontSize: '12px', fill: '#000' })
 
           //  Enemies
 
@@ -130,6 +176,7 @@ export default {
           this.physics.add.collider(this.enemies, this.level)
 
           this.physics.add.overlap(this.player, this.enemies, die, null, this)
+          this.physics.world.on('worldbounds', onWorldBoundsCollide, this)
 
           //  prepare loser txt
           this.loserText = this.add.text(500 / 2, 200 / 2 - 50, 'Looser!', { fontSize: '24px', fill: '#000' }).setVisible(false)
@@ -156,7 +203,7 @@ export default {
           }
           // JUMP
           if (this.cursors.up.isDown && this.player.body.touching.down) {
-            this.player.setVelocityY(-200)
+            this.player.setVelocityY(-170)
           }
 
           // console.log('updated')
